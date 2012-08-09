@@ -11,15 +11,10 @@
 function situs_drush_command() {
   $items = array();
 
-  /*
-   * situs-build ...
-   * situs-rebuild
-   */
-
-  $items['situs-rebuild'] = array(
+  $items['situs-build'] = array(
     'description' => 'Build a site.',
     'arguments' => array(
-      'site-alias' => 'Site alias to rebuild.',
+      'site-alias' => 'Site alias to build.',
     ),
     'bootstrap' => DRUSH_BOOTSTRAP_DRUSH,
 
@@ -29,9 +24,9 @@ function situs_drush_command() {
 }
 
 /**
- * Validate arguments to rebuild command.
+ * Validate arguments to build command.
  */
-function drush_situs_rebuild_validate($alias = '') {
+function drush_situs_build_validate($alias = '') {
   $site_record = drush_sitealias_get_record($alias);
   if (empty($alias)) {
     return drush_set_error('NO_SITEALIAS', dt('No site alias specified.'));
@@ -51,30 +46,20 @@ function drush_situs_rebuild_validate($alias = '') {
 }
 
 /**
- *
+ * Build command.
  */
-function drush_situs_rebuild($alias) {
+function drush_situs_build($alias) {
   $site_record = drush_sitealias_get_record($alias);
   $root = $site_record['root'];
 
   $build_path = drush_tempdir() . '/build';
 
-  // @todo run pre (re)build hooks
   // @todo document this.
   $result = drush_command_invoke_all('situs_pre_build', $site_record);
   if (!empty($result)) {
     return FALSE;
   }
-  /* $hook = 'situs_pre_build'; */
-  /* foreach (drush_command_implements($hook) as $module) { */
-  /*   $function = $module . '_' . $hook; */
-  /*   $result = call_user_func_array($function, array($site_record)); */
 
-  /*   if (isset($result)) { */
-  /*     die(); */
-  /*     return FALSE; */
-  /*   } */
-  /* } */
   $settings = array(
     'working-copy' => TRUE,
   );
@@ -85,7 +70,7 @@ function drush_situs_rebuild($alias) {
   }
 
   // @todo backup the old around here.
-  // @todo move site/ stuff to the new.
+  // Move site/ stuff to the new.
   $files = drush_scan_directory($root . '/sites', '/.*/', array('all', 'example.sites.php'), 0, FALSE, 'basename');
   foreach ($files as $name => $info) {
     if (is_dir($info->filename)) {
@@ -95,15 +80,26 @@ function drush_situs_rebuild($alias) {
       drush_op('rename', $info->filename, $build_path . '/sites/' . $name);
     }
   }
+
+  // @todo document this.
+  $result = drush_command_invoke_all('situs_post_build', $site_record, $build_path);
+  if (!empty($result)) {
+    return FALSE;
+  }
   // Move site into place.
-  drush_command_invoke_all('situs_post_build', $site_record, $build_path);
   drush_move_dir($build_path, $root, TRUE);
 
-  // @todo run post (re)build hooks
+  // @xxx Post move hooks?
 }
 
+/**
+ * Implements hook_drush_help_alter().
+ *
+ * Add in the options for git-check. This demonstrates how add on modules should
+ * do it.
+ */
 function situs_drush_help_alter(&$command) {
-  if ($command['command'] == 'situs-rebuild') {
+  if ($command['command'] == 'situs-build') {
     $command['options']['git-check'] = 'Check that all git repositories contains no uncommitted changes';
   }
 }

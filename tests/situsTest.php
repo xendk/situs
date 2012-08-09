@@ -49,7 +49,7 @@ class situsCase extends Drush_CommandTestCase {
 
   function testBuild() {
     $root = $this->aliases['homer']['root'];
-    $this->drush('situs-rebuild', array('@homer'));
+    $this->drush('situs-build', array('@homer'));
 
     // Test for some random stuff, just to make sure the make worked.
     $this->assertFileExists($root . '/index.php', 'Index is there.');
@@ -57,9 +57,9 @@ class situsCase extends Drush_CommandTestCase {
     $this->assertFileExists($root . '/sites/all/modules/contrib/devel/devel.module', 'Devel is there.');
   }
 
-  function testRebuild() {
+  function testBuildAgain() {
     $root = $this->aliases['marge']['root'];
-    $this->drush('situs-rebuild', array('@marge'));
+    $this->drush('situs-build', array('@marge'));
 
     // Test for some random stuff, just to make sure the make worked.
     $this->assertFileExists($root . '/index.php', 'Index is there.');
@@ -75,7 +75,7 @@ class situsCase extends Drush_CommandTestCase {
     // Change make file so we have a change to check for.
     $this->aliases['marge']['make-file'] = dirname(__FILE__) . '/simple2.make';
     $this->saveAliases();
-    $this->drush('situs-rebuild', array('@marge'));
+    $this->drush('situs-build', array('@marge'));
 
     $this->assertFileExists($root . '/sites/all/modules/devel/devel.module', 'Devel is in new location.');
 
@@ -85,7 +85,7 @@ class situsCase extends Drush_CommandTestCase {
 
   function testGitCheck() {
     $root = $this->aliases['bart']['root'];
-    $this->drush('situs-rebuild', array('@bart'));
+    $this->drush('situs-build', array('@bart'));
 
     // Test for some random stuff, just to make sure the make worked.
     $this->assertFileExists($root . '/sites/all/modules/devel/devel.module', 'Devel is there.');
@@ -96,19 +96,19 @@ class situsCase extends Drush_CommandTestCase {
     file_put_contents($file, $new_content);
     $this->assertStringEqualsFile($file, $new_content, 'File has new content.');
 
-    $this->drush('situs-rebuild', array('@bart'), array('git-check' => TRUE), NULL, NULL, self::EXIT_ERROR);
+    $this->drush('situs-build', array('@bart'), array('git-check' => TRUE), NULL, NULL, self::EXIT_ERROR);
     $this->assertStringEqualsFile($file, $new_content, 'File still has new content.');
 
     // Check that it works when set in alias.
     $this->aliases['bart']['git-check'] = TRUE;
     $this->saveAliases();
-    $this->drush('situs-rebuild', array('@bart'), array('git-check' => TRUE), NULL, NULL, self::EXIT_ERROR);
+    $this->drush('situs-build', array('@bart'), array('git-check' => TRUE), NULL, NULL, self::EXIT_ERROR);
     $this->assertStringEqualsFile($file, $new_content, 'File still has new content.');
 
     // Run without git check.
     $this->aliases['bart']['git-check'] = FALSE;
     $this->saveAliases();
-    $this->drush('situs-rebuild', array('@bart'));
+    $this->drush('situs-build', array('@bart'));
     $this->assertStringNotEqualsFile($file, $new_content, 'File still has new content.');
 
   }
