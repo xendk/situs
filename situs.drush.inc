@@ -12,15 +12,32 @@ function situs_drush_command() {
   $items = array();
 
   $items['situs-build'] = array(
-    'description' => 'Build a site.',
+    'description' => '(Re)build a site.',
     'arguments' => array(
       'site-alias' => 'Site alias to build.',
     ),
     'bootstrap' => DRUSH_BOOTSTRAP_DRUSH,
-
   );
 
   return $items;
+}
+
+/**
+ * Implements hook_drush_help().
+ */
+function situs_drush_help($section) {
+  switch ($section) {
+    case 'meta:situs:title':
+      return dt('Situs');
+    case 'meta:situs:summary':
+      return dt('Simple site (re)building.');
+    case 'drush:situs-build':
+      return dt("Builds or rebuilds a site.
+
+Requires a site alias with a 'make-file' and a 'root' specification. Builds the site from the make file, and moves existing sites over from the sites folder.
+
+Plugins may provide further functionality through command options (see options below, which can also be specified in the alias).");
+  }
 }
 
 /**
