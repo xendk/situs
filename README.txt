@@ -21,6 +21,9 @@ $aliases['mysite'] = array(
   'make-file' => '/home/user/mysite.make',
 );
 
+As the make file is simply passed to Drush make, anything that Drush
+make will accept should be usable, including remote make files.
+
 Building and rebuilding is then done with the same command:
 
 drush situs-build @mysite
@@ -53,12 +56,16 @@ or 'git-check' => TRUE in the alias definition, it will check all git
 repositories in the existing root for uncommitted changes or unpushed
 commits, and abort the rebuild if any is found.
 
+It is highly recommended to put it in the alias if using git for
+development, as it provides a safety net against building over
+uncommitted/pushed changes.
+
 
 Ideas for plugins
 =================
 
 Some plugins that's planned (I wont complain if someone beats me to it
-with a pull request).
+with a pull request):
 
 Database sync: Triggers on the existence of a 'sync-from' option,
 which is the name of another alias to do a sql-sync from. Has a
