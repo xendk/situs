@@ -51,13 +51,13 @@ function drush_situs_build_validate($alias = '') {
   if (empty($site_record)) {
     return drush_set_error('INVALID_SITEALIAS', dt('Could not find site alias specified.'));
   }
-  if (empty($site_record['root'])) {
+  if (!($root = drush_get_option('root', FALSE))) {
     return drush_set_error('NO_ROOT', dt('No root directory specified.'));
   }
-  if (!is_dir(dirname($site_record['root']))) {
+  if (!is_dir(dirname($root))) {
     return drush_set_error('INVALID_ROOT_PARENT', dt("Root parent doesn't exist, or isn't a directory."));
   }
-  if (empty($site_record['make-file'])) {
+  if (drush_get_option('make-file', FALSE)) {
     return drush_set_error('NO_MAKEFILE', dt('No make file on alias.'));
   }
 }
@@ -67,7 +67,7 @@ function drush_situs_build_validate($alias = '') {
  */
 function drush_situs_build($alias) {
   $site_record = drush_sitealias_get_record($alias);
-  $root = $site_record['root'];
+  $root = drush_get_option('root', FALSE);
 
   $build_path = drush_tempdir() . '/build';
 
