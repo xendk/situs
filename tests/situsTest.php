@@ -42,6 +42,10 @@ class situsCase extends Drush_CommandTestCase {
         'root' => $this->webroot() . '/lisa',
         'make-file' => dirname(__FILE__) . '/failing.make',
       ),
+      'maggie' => array(
+        'root' => $this->webroot() . '/maggie',
+        'make-file' => dirname(__FILE__) . '/simple.make',
+      ),
     );
 
     $this->saveAliases();
@@ -136,6 +140,39 @@ class situsCase extends Drush_CommandTestCase {
 
     // Coder was only specified in the failing make file.
     $this->assertFileNotExists($root . '/sites/all/modules/coder/coder.module', 'Coder is there.');
+  }
+
+  function testPermissions() {
+    $root = $this->aliases['maggie']['root'];
+    $this->drush('situs-build', array('@maggie'));
+
+    mkdir($root . '/sites/maggie1');
+    file_put_contents($root . '/sites/maggie1/settings.php', '<?php');
+    mkdir($root . '/sites/maggie2');
+    file_put_contents($root . '/sites/maggie2/settings.php', '<?php');
+    mkdir($root . '/sites/maggie3');
+    file_put_contents($root . '/sites/maggie3/settings.php', '<?php');
+
+
+    // Make dir read only.
+    // chmod(dirname($root), 0555);
+    chmod($root, 0000);
+    $this->drush('situs-build', array('@maggie'), array(), NULL, NULL, self::EXIT_ERROR);
+    chmod($root, 0755);
+    $this->assertFileExists($root . '/index.php', 'Index is still there.');
+    $this->assertFileExists($root . '/sites/maggie1/settings.php', 'Site 1 is still there.');
+    $this->assertFileExists($root . '/sites/maggie2/settings.php', 'Site 2 is still there.');
+    $this->assertFileExists($root . '/sites/maggie3/settings.php', 'Site 3 is still there.');
+    // chmod(dirname($root), 0755);
+
+    // Make a site dir unreadable.
+    chmod($root . '/sites/maggie2', 0000);
+    $this->drush('situs-build', array('@maggie'), array(), NULL, NULL, self::EXIT_ERROR);
+    chmod($root . '/sites/maggie2', 0755);
+    $this->assertFileExists($root . '/index.php', 'Index is still there.');
+    $this->assertFileExists($root . '/sites/maggie1/settings.php', 'Site 1 is still there.');
+    $this->assertFileExists($root . '/sites/maggie2/settings.php', 'Site 2 is still there.');
+    $this->assertFileExists($root . '/sites/maggie3/settings.php', 'Site 3 is still there.');
 
   }
 }

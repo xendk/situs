@@ -71,6 +71,9 @@ function drush_situs_build($alias) {
 
   $build_path = drush_tempdir() . '/build';
 
+  drush_set_context('SITUS_ROOT_PATH', $root);
+  drush_set_context('SITUS_BUILD_PATH', $build_path);
+
   // @todo document this.
   $result = drush_command_invoke_all('situs_pre_build', $site_record);
   if (!empty($result)) {
@@ -89,13 +92,22 @@ function drush_situs_build($alias) {
   // @todo backup the old around here.
   // Move site/ stuff to the new.
   $files = drush_scan_directory($root . '/sites', '/.*/', array('all', 'example.sites.php'), 0, FALSE, 'basename');
+  $moved = array();
   foreach ($files as $name => $info) {
     if (is_dir($info->filename)) {
-      drush_move_dir($info->filename, $build_path . '/sites/' . $name, TRUE);
+      if (!drush_move_dir($info->filename, $build_path . '/sites/' . $name, TRUE)) {
+        return drush_set_error('CANNOT_MOVE_SITE', dt('Could not move site @site.', array('@site' => $name)));
+      }
+      $moved[] = $name;
     }
     else {
-      drush_op('rename', $info->filename, $build_path . '/sites/' . $name);
+      if (!drush_op('rename', $info->filename, $build_path . '/sites/' . $name)) {
+        return drush_set_error('CANNOT_MOVE_FILE', dt('Could not move file @file.', array('@file' => $name)));
+
+      }
+      $moved[] = $name;
     }
+    drush_set_context('SITUS_MOVED_SITES', $moved);
   }
 
   // @todo document this.
@@ -104,9 +116,39 @@ function drush_situs_build($alias) {
     return FALSE;
   }
   // Move site into place.
-  drush_move_dir($build_path, $root, TRUE);
+  if (file_exists($root)) {
+    if (!drush_move_dir($root, $root . '.situs-old', TRUE)) {
+      return drush_set_error('CANNOT_MOVE_OLD_ROOT', dt('Cannot move old root out of way.'));
+    }
+    drush_set_context('SITUS_ROOT_MOVED', TRUE);
+  }
+  if (!drush_move_dir($build_path, $root, TRUE)) {
+    return drush_set_error('CANNOT_MOVE_NEW_ROOT', dt('Cannot move new site into place. It is located at @path, please fi'));
+  }
 
   // @xxx Post move hooks?
+}
+
+/**
+ * Rollback.
+ */
+function drush_situs_build_rollback() {
+  $root = drush_get_context('SITUS_ROOT_PATH', '');
+  $build_path = drush_get_context('SITUS_BUILD_PATH', '');
+  if (drush_get_context('SITUS_ROOT_MOVED', FALSE)) {
+    // Move it back.
+    drush_move_dir($root . '.situs-old', $root, TRUE);
+  }
+  if ($sites = drush_get_context('SITUS_MOVED_SITES', array())) {
+    foreach ($sites as $name) {
+      if (is_dir($info->filename)) {
+        drush_move_dir($build_path . '/sites/' . $name, $root . '/sites/' . $name, TRUE);
+      }
+      else {
+        drush_op('rename', $build_path . '/sites/' . $name, $root . '/sites/' . $name);
+      }
+    }
+  }
 }
 
 /**
