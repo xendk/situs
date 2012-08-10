@@ -38,6 +38,10 @@ class situsCase extends Drush_CommandTestCase {
         'root' => $this->webroot() . '/bart',
         'make-file' => dirname(__FILE__) . '/with_git.make',
       ),
+      'lisa' => array(
+        'root' => $this->webroot() . '/lisa',
+        'make-file' => dirname(__FILE__) . '/failing.make',
+      ),
     );
 
     $this->saveAliases();
@@ -110,6 +114,28 @@ class situsCase extends Drush_CommandTestCase {
     $this->saveAliases();
     $this->drush('situs-build', array('@bart'));
     $this->assertStringNotEqualsFile($file, $new_content, 'File still has new content.');
+  }
+
+  function testFail() {
+    $root = $this->aliases['lisa']['root'];
+    $this->drush('situs-build', array('@lisa'), array(), NULL, NULL, self::EXIT_ERROR);
+    $this->assertFileNotExists($root, 'Failing build creates no directory.');
+
+    // Change to a make file that works.
+    $this->aliases['lisa']['make-file'] = dirname(__FILE__) . '/with_git.make';
+    $this->saveAliases();
+    $this->drush('situs-build', array('@lisa'));
+
+    $this->assertFileExists($root . '/index.php', 'Index is there.');
+
+    // Change it back and check that the build command returns an error.
+    $this->aliases['lisa']['make-file'] = dirname(__FILE__) . '/failing.make';
+    $this->saveAliases();
+
+    $this->drush('situs-build', array('@lisa'), array(), NULL, NULL, self::EXIT_ERROR);
+
+    // Coder was only specified in the failing make file.
+    $this->assertFileNotExists($root . '/sites/all/modules/coder/coder.module', 'Coder is there.');
 
   }
 }

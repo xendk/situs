@@ -83,7 +83,7 @@ function drush_situs_build($alias) {
   $res = drush_invoke_process('@self', 'make', array($site_record['make-file'], $build_path), $settings, TRUE);
 
   if (!$res || $res['error_status'] != 0) {
-    drush_set_error('BUILD_FAILED', dt('Drush Make failed.'));
+    return drush_set_error('BUILD_FAILED', dt('Drush Make failed.'));
   }
 
   // @todo backup the old around here.
