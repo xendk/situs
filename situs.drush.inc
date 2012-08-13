@@ -188,19 +188,23 @@ function situs_drush_help_alter(&$command) {
  */
 function situs_situs_pre_build() {
   if (drush_get_option('git-check', FALSE)) {
+    $success = TRUE;
     $root = drush_get_option('root', '');
     $git_checkouts = `find $root -type d -name .git`;
-    $git_checkouts = split("\n", $git_checkouts);
+    $git_checkouts = array_filter(split("\n", $git_checkouts));
     foreach ($git_checkouts as $filename) {
       $dirname = dirname($filename);
       $uncommitted = `cd $dirname && git status --porcelain`;
       if (!empty($uncommitted)) {
-        return drush_set_error('UNCOMMITTED_CHANGES', dt("You have uncommitted changes in @dir.", array('@dir' => strtr(dirname($filename), array($root => '')))));
+        $success = drush_set_error('UNCOMMITTED_CHANGES', dt("You have uncommitted changes in @dir.", array('@dir' => strtr(dirname($filename), array($root => '')))));
+        drush_log($uncommitted, 'notice');
       }
       $unpushed = `cd $dirname && git log --branches --not --remotes --simplify-by-decoration --decorate --oneline`;
       if (!empty($unpushed)) {
-        return drush_set_error('UNPUSHED_CHANGES', dt("You have unpushed changes in @dir.", array('@dir' => strtr(dirname($filename), array($root => '')))));
+        $success = drush_set_error('UNPUSHED_CHANGES', dt("You have unpushed changes in @dir.", array('@dir' => strtr(dirname($filename), array($root => '')))));
+        drush_log($unpushed, 'notice');
       }
     }
+    return $success;
   }
 }
