@@ -53,7 +53,6 @@ function drush_situs_build_pre_validate($alias = '') {
       drush_sitealias_set_alias_context($alias, '');
     }
   }
-  die();
 }
 
 /**
@@ -73,8 +72,8 @@ function drush_situs_build_validate($alias = '') {
   if (!is_dir(dirname($root))) {
     return drush_set_error('INVALID_ROOT_PARENT', dt("Root parent doesn't exist, or isn't a directory."));
   }
-  if (drush_get_option('make-file', FALSE)) {
-    return drush_set_error('NO_MAKEFILE', dt('No make file on alias.'));
+  if (!drush_get_option('make-file', FALSE)) {
+    return drush_set_error('NO_MAKEFILE', dt('No make file specified.'));
   }
 }
 
