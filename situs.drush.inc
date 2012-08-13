@@ -82,6 +82,7 @@ function drush_situs_build($alias) {
 
   $settings = array(
     'working-copy' => TRUE,
+    'no-gitinfofile' => TRUE,
   );
   $res = drush_invoke_process('@self', 'make', array($site_record['make-file'], $build_path), $settings, TRUE);
 
