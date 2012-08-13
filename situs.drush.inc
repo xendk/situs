@@ -126,6 +126,8 @@ function drush_situs_build($alias) {
   if (!drush_move_dir($build_path, $root, TRUE)) {
     return drush_set_error('CANNOT_MOVE_NEW_ROOT', dt('Cannot move new site into place. It is located at @path, please fi'));
   }
+  // Now delete the old dir.
+  drush_delete_dir($root . '.situs-old', TRUE);
 
   // @xxx Post move hooks?
 }
