@@ -195,7 +195,6 @@ function situs_situs_pre_build() {
       $dirname = dirname($filename);
       $uncommitted = `cd $dirname && git status --porcelain`;
       if (!empty($uncommitted)) {
-        drush_print_r($uncommitted);
         return drush_set_error('UNCOMMITTED_CHANGES', dt("You have uncommitted changes in @dir.", array('@dir' => strtr(dirname($filename), array($root => '')))));
       }
       $unpushed = `cd $dirname && git log --branches --not --remotes --simplify-by-decoration --decorate --oneline`;
