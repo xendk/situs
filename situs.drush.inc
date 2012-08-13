@@ -41,16 +41,32 @@ Plugins may provide further functionality through command options (see options b
 }
 
 /**
+ * Pre_validate.
+ *
+ * If an alias is given as an argument, use it as the active alias.
+ */
+function drush_situs_build_pre_validate($alias = '') {
+  $site = drush_get_context('DRUSH_TARGET_SITE_ALIAS');
+  if (empty($site)) {
+    $alias = drush_sitealias_get_record($alias);
+    if (!empty($alias)) {
+      drush_sitealias_set_alias_context($alias, '');
+    }
+  }
+  die();
+}
+
+/**
  * Validate arguments to build command.
  */
 function drush_situs_build_validate($alias = '') {
-  $site_record = drush_sitealias_get_record($alias);
-  if (empty($alias)) {
-    return drush_set_error('NO_SITEALIAS', dt('No site alias specified.'));
-  }
-  if (empty($site_record)) {
-    return drush_set_error('INVALID_SITEALIAS', dt('Could not find site alias specified.'));
-  }
+  /* $site_record = drush_sitealias_get_record($alias); */
+  /* if (empty($alias)) { */
+  /*   return drush_set_error('NO_SITEALIAS', dt('No site alias specified.')); */
+  /* } */
+  /* if (empty($site_record)) { */
+  /*   return drush_set_error('INVALID_SITEALIAS', dt('Could not find site alias specified.')); */
+  /* } */
   if (!($root = drush_get_option('root', FALSE))) {
     return drush_set_error('NO_ROOT', dt('No root directory specified.'));
   }
@@ -66,8 +82,9 @@ function drush_situs_build_validate($alias = '') {
  * Build command.
  */
 function drush_situs_build($alias) {
-  $site_record = drush_sitealias_get_record($alias);
+  /* $site_record = drush_sitealias_get_record($alias); */
   $root = drush_get_option('root', FALSE);
+  $makefile = drush_get_option('make-file', FALSE);
 
   $build_path = drush_tempdir() . '/build';
 
@@ -75,7 +92,7 @@ function drush_situs_build($alias) {
   drush_set_context('SITUS_BUILD_PATH', $build_path);
 
   // @todo document this.
-  $result = drush_command_invoke_all('situs_pre_build', $site_record);
+  $result = drush_command_invoke_all('situs_pre_build');
   if (!empty($result)) {
     return FALSE;
   }
@@ -83,7 +100,7 @@ function drush_situs_build($alias) {
   $settings = array(
     'working-copy' => TRUE,
   );
-  $res = drush_invoke_process('@self', 'make', array($site_record['make-file'], $build_path), $settings, TRUE);
+  $res = drush_invoke_process('@self', 'make', array($makefile, $build_path), $settings, TRUE);
 
   if (!$res || $res['error_status'] != 0) {
     return drush_set_error('BUILD_FAILED', dt('Drush Make failed.'));
@@ -111,7 +128,7 @@ function drush_situs_build($alias) {
   }
 
   // @todo document this.
-  $result = drush_command_invoke_all('situs_post_build', $site_record, $build_path);
+  $result = drush_command_invoke_all('situs_post_build', $build_path);
   if (!empty($result)) {
     return FALSE;
   }
@@ -167,7 +184,7 @@ function situs_drush_help_alter(&$command) {
 /**
  * Implements hook_situs_pre_build().
  */
-function situs_situs_pre_build($site_alias) {
+function situs_situs_pre_build() {
   if (drush_get_option('git-check', FALSE)) {
     $root = $site_alias['root'];
     $git_checkouts = `find $root -type d -name .git`;
