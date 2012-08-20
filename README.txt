@@ -12,9 +12,13 @@ directory, which is often populated by make files).
 Usage
 =====
 
-Situs needs three things in order to build: A site alias, a root path
-and a make file. The make file is simply specified in the site alias,
-like so:
+Situs needs two things in order to build: A root path and a make
+file. In the simplest case, this can be specified on the command line:
+
+drush situs-build --root=/var/www/site --make-file=/home/user/site.make
+
+For easier rebuilding it is recommended to use a site alias. The make
+file is simply specified in the site alias, like so:
 
 $aliases['mysite'] = array(
   'root' => '/var/www/mysite,
