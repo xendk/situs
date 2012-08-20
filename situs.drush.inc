@@ -14,7 +14,11 @@ function situs_drush_command() {
   $items['situs-build'] = array(
     'description' => '(Re)build a site.',
     'arguments' => array(
-      'site-alias' => 'Site alias to build.',
+      'site-alias' => 'Site alias to build, optional if specifying root and make-file options.',
+    ),
+    'options' => array(
+      'root' => 'The root of the site to build.',
+      'make-file' => 'The make file to use for building.',
     ),
     'bootstrap' => DRUSH_BOOTSTRAP_DRUSH,
   );
@@ -80,7 +84,7 @@ function drush_situs_build_validate($alias = '') {
 /**
  * Build command.
  */
-function drush_situs_build($alias) {
+function drush_situs_build($alias = '') {
   /* $site_record = drush_sitealias_get_record($alias); */
   $root = drush_get_option('root', FALSE);
   $makefile = drush_get_option('make-file', FALSE);

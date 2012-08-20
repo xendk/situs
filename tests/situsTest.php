@@ -173,6 +173,17 @@ class situsCase extends Drush_CommandTestCase {
     $this->assertFileExists($root . '/sites/maggie1/settings.php', 'Site 1 is still there.');
     $this->assertFileExists($root . '/sites/maggie2/settings.php', 'Site 2 is still there.');
     $this->assertFileExists($root . '/sites/maggie3/settings.php', 'Site 3 is still there.');
+  }
 
+  function testNoAlias() {
+    $root = $this->webroot() . '/moe';
+    $make_file = dirname(__FILE__) . '/simple.make';
+
+    $this->drush('situs-build', array(), array('root' => $root, 'make-file' => $make_file));
+
+    // Test for some random stuff, just to make sure the make worked.
+    $this->assertFileExists($root . '/index.php', 'Index is there.');
+    $this->assertFileExists($root . '/modules/system/system.module', 'System module is there.');
+    $this->assertFileExists($root . '/sites/all/modules/contrib/devel/devel.module', 'Devel is there.');
   }
 }
