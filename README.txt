@@ -15,7 +15,7 @@ Usage
 Situs needs two things in order to build: A root path and a make
 file. In the simplest case, this can be specified on the command line:
 
-drush situs-build --root=/var/www/site --make-file=/home/user/site.make
+drush situs-build --root=/var/www/site --make-file=./site.make
 
 For easier rebuilding it is recommended to use a site alias. The make
 file is simply specified in the site alias, like so:

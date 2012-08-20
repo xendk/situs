@@ -186,4 +186,19 @@ class situsCase extends Drush_CommandTestCase {
     $this->assertFileExists($root . '/modules/system/system.module', 'System module is there.');
     $this->assertFileExists($root . '/sites/all/modules/contrib/devel/devel.module', 'Devel is there.');
   }
+
+  function testNoAliasRelative() {
+    $root = $this->webroot() . '/ned';
+    copy(dirname(__FILE__) . '/simple.make', UNISH_SANDBOX . '/share/ned.make');
+    $make_file = './share/ned.make';
+
+    $this->drush('situs-build', array(), array('root' => $root, 'make-file' => $make_file));
+
+    // Test for some random stuff, just to make sure the make worked.
+    $this->assertFileExists($root . '/index.php', 'Index is there.');
+    $this->assertFileExists($root . '/modules/system/system.module', 'System module is there.');
+    $this->assertFileExists($root . '/sites/all/modules/contrib/devel/devel.module', 'Devel is there.');
+  }
+
+
 }
