@@ -13,6 +13,7 @@ function situs_drush_command() {
 
   $items['situs-build'] = array(
     'description' => '(Re)build a site.',
+    'aliases' => array('situs'),
     'arguments' => array(
       'site-alias' => 'Site alias to build, optional if specifying root and make-file options.',
     ),
