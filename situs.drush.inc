@@ -64,13 +64,6 @@ function drush_situs_build_pre_validate($alias = '') {
  * Validate arguments to build command.
  */
 function drush_situs_build_validate($alias = '') {
-  /* $site_record = drush_sitealias_get_record($alias); */
-  /* if (empty($alias)) { */
-  /*   return drush_set_error('NO_SITEALIAS', dt('No site alias specified.')); */
-  /* } */
-  /* if (empty($site_record)) { */
-  /*   return drush_set_error('INVALID_SITEALIAS', dt('Could not find site alias specified.')); */
-  /* } */
   if (!($root = drush_get_option('root', FALSE))) {
     return drush_set_error('NO_ROOT', dt('No root directory specified.'));
   }
