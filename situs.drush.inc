@@ -9,12 +9,12 @@
  * Implements hook_drush_command().
  */
 function situs_drush_command() {
-  // Build command options, including those defined by hooks.
+  // Build command options, including those defined by plugins.
   $options = array(
     'root' => 'The root of the site to build.',
     'make-file' => 'The make file to use for building.',
   );
-  foreach (situs_hooks() as $info) {
+  foreach (situs_plugins() as $info) {
     if (!empty($info['options'])) {
       $options += $info['options'];
     }
@@ -30,8 +30,8 @@ function situs_drush_command() {
     'bootstrap' => DRUSH_BOOTSTRAP_DRUSH,
   );
 
-  $items['situs-hooks'] = array(
-    'description' => 'Show available Situs hooks.',
+  $items['situs-plugins'] = array(
+    'description' => 'Show available Situs plugins.',
     'bootstrap' => DRUSH_BOOTSTRAP_DRUSH,
   );
 
@@ -54,9 +54,9 @@ Requires a site alias with a 'make-file' and a 'root' specification. Builds the 
 
 Plugins may provide further functionality through command options (see options below, which can also be specified in the alias).");
     case 'drush:situs-hooks':
-      return dt('Lists the hooks defined for Situs.
+      return dt('Lists the plugins available  for Situs.
 
-These hooks may hook into the build process and do additional work when building a site.');
+These plugins may hook into the build process and do additional work when building a site.');
   }
 }
 
@@ -186,8 +186,8 @@ function drush_situs_build_rollback() {
 /**
  * List hooks command.
  */
-function drush_situs_hooks() {
-  foreach (situs_hooks() as $key => $info) {
+function drush_situs_plugins() {
+  foreach (situs_plugins() as $key => $info) {
     drush_print($info['name'] . ' (' . $key . ')');
     drush_print(wordwrap($info['description'], drush_get_context('DRUSH_COLUMNS', 80)));
     drush_print();
@@ -209,9 +209,9 @@ function drush_situs_hooks() {
 }
 
 /**
- * Implements hook_situs_hooks().
+ * Implements hook_situs_plugin().
  */
-function situs_situs_hooks() {
+function situs_situs_plugin() {
   return array(
     'git-check' => array(
       'name' => 'Git check',
@@ -236,13 +236,13 @@ function situs_situs_hooks() {
 }
 
 /**
- * Get defined situs hooks.
+ * Get defined situs plugins.
  */
-function situs_hooks() {
-  static $hooks;
-  if (!isset($hooks)) {
-    $hooks = drush_command_invoke_all('situs_hooks');
-    foreach ($hooks as $key => &$info) {
+function situs_plugins() {
+  static $plugins;
+  if (!isset($plugins)) {
+    $plugins = drush_command_invoke_all('situs_plugin');
+    foreach ($plugins as $key => &$info) {
       $info += array(
         'name' => '',
         'description' => '',
@@ -250,10 +250,10 @@ function situs_hooks() {
       );
     }
   }
-  return $hooks;
+  return $plugins;
 }
 
-function situs_default_hook_order($hook) {
+function situs_default_plugin_order($hook) {
   static $orders = array(
     'pre_build' => '*,drush',
     'post_build' => '',
@@ -262,21 +262,21 @@ function situs_default_hook_order($hook) {
 }
 
 /**
- * Sorts an array of hooks according to a string spec.
+ * Sorts an array of plugins according to a string spec.
  *
  * The spec is a comma separated list of names, with * functioning as a wildcard
- * for any unspecified hooks. For example will "*,drush" ensure that the drush
- * hook is called last.
+ * for any unspecified plugin. For example will "*,drush" ensure that the drush
+ * plugin is called last.
  */
-function situs_order_hooks($hooks, $order) {
+function situs_order_plugins($plugins, $order) {
   $pre = $post = array();
   $seen_star = FALSE;
   $order = explode(',', $order);
-  $hooks = array_flip($hooks);
+  $plugins = array_flip($plugins);
   foreach ($order as $spec) {
     $spec = trim($spec);
-    if (isset($hooks[$spec])) {
-      unset($hooks[$spec]);
+    if (isset($plugins[$spec])) {
+      unset($plugins[$spec]);
       if ($seen_star) {
         $post[] = $spec;
       }
@@ -288,11 +288,11 @@ function situs_order_hooks($hooks, $order) {
       $seen_star = TRUE;
     }
   }
-  return array_merge($pre, array_keys($hooks), $post);
+  return array_merge($pre, array_keys($plugins), $post);
 }
 
 /**
- * Invoke a situs hook, respecting any hook orders given.
+ * Invoke a situs hook, respecting plugin ordering..
  *
  * @param string $hook
  *   The hook to invoke.
@@ -303,20 +303,20 @@ function situs_order_hooks($hooks, $order) {
 function situs_invoke($hook) {
   $args = func_get_args();
   array_shift($args);
-  $defined_hooks = situs_hooks();
-  $command_files = array();
-  foreach ($defined_hooks as $key => $defined_hook) {
-    if (!empty($defined_hook[$hook])) {
-      $command_files[] = $key;
+  $all_plugins = situs_plugins();
+  $plugins = array();
+  foreach ($all_plugins as $key => $plugin) {
+    if (!empty($plugin[$hook])) {
+      $plugins[] = $key;
     }
   }
-  $order = drush_get_option($hook . '_order', situs_default_hook_order($hook));
-  $command_files = situs_order_hooks($command_files, $order);
+  $order = drush_get_option($hook . '_order', situs_default_plugin_order($hook));
+  $plugins = situs_order_plugins($plugins, $order);
 
   $return = TRUE;
-  foreach ($command_files as $command_file) {
-    drush_log(dt('Calling @hook Situs @hook_name hook.', array('@hook' => $command_file, '@hook_name' => $hook)), 'notice');
-    $function = $defined_hooks[$command_file][$hook];
+  foreach ($plugins as $plugin) {
+    drush_log(dt('Calling @hook Situs @hook_name plugin.', array('@hook' => $plugin, '@hook_name' => $hook)), 'notice');
+    $function = $all_plugins[$plugin][$hook];
     $result = call_user_func_array($function, $args);
     // Any hook returning non-true is considered a failure.
     if (isset($result)) {

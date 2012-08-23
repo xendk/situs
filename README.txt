@@ -43,13 +43,27 @@ Situs is meant to be expanded upon, and the plan is to include a
 selection of useful add-ons. Currently there's only the git-check
 plugin (see below), but implementing a plugin is strait-forward:
 
-Implement hook_drush_help_alter in order to add a switch to trigger
-the plugin for a site. All plugins should add a switch for its
-behaviour, either to enable it (preferred), or disable it.
+Plugins should implement hook_situs_plugin() which should return an
+array of plugins. This array is keyed on internal plugin name, and the
+value is the plugin definition array.
 
-Implement one or more of the hooks Situs provides, situs_pre_build and
-situs_post_build, to do whatever, when the switch is specified.
+The definition array can contain the following keys:
 
+'name'
+  The human readable name of the plugin. Used in help pages.
+'description'
+  A short description of what the plugin does.
+'options'
+  Command line options the plugin accepts. This is the same format as
+  options in drush command definitions. Plugin should always define an
+  option to enable (preferred) or disable it.
+'pre_build'
+  Callback for pre_build hook. Optional.
+'post_build'
+  Callback for post_build hook. Optional.
+
+The callbacks will be called at the appropriate stages of the build
+process.
 
 Checking git checkouts for changes 
 ==================================
