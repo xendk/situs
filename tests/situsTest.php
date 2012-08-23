@@ -199,6 +199,4 @@ class situsCase extends Drush_CommandTestCase {
     $this->assertFileExists($root . '/modules/system/system.module', 'System module is there.');
     $this->assertFileExists($root . '/sites/all/modules/contrib/devel/devel.module', 'Devel is there.');
   }
-
-
 }

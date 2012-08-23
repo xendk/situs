@@ -9,7 +9,16 @@
  * Implements hook_drush_command().
  */
 function situs_drush_command() {
-  $items = array();
+  // Build command options, including those defined by hooks.
+  $options = array(
+    'root' => 'The root of the site to build.',
+    'make-file' => 'The make file to use for building.',
+  );
+  foreach (situs_hooks() as $info) {
+    if (!empty($info['options'])) {
+      $options += $info['options'];
+    }
+  }
 
   $items['situs-build'] = array(
     'description' => '(Re)build a site.',
@@ -17,10 +26,12 @@ function situs_drush_command() {
     'arguments' => array(
       'site-alias' => 'Site alias to build, optional if specifying root and make-file options.',
     ),
-    'options' => array(
-      'root' => 'The root of the site to build.',
-      'make-file' => 'The make file to use for building.',
-    ),
+    'options' => $options,
+    'bootstrap' => DRUSH_BOOTSTRAP_DRUSH,
+  );
+
+  $items['situs-hooks'] = array(
+    'description' => 'Show available Situs hooks.',
     'bootstrap' => DRUSH_BOOTSTRAP_DRUSH,
   );
 
@@ -42,6 +53,10 @@ function situs_drush_help($section) {
 Requires a site alias with a 'make-file' and a 'root' specification. Builds the site from the make file, and moves existing sites over from the sites folder.
 
 Plugins may provide further functionality through command options (see options below, which can also be specified in the alias).");
+    case 'drush:situs-hooks':
+      return dt('Lists the hooks defined for Situs.
+
+These hooks may hook into the build process and do additional work when building a site.');
   }
 }
 
@@ -89,8 +104,7 @@ function drush_situs_build($alias = '') {
   drush_set_context('SITUS_BUILD_PATH', $build_path);
 
   // @todo document this.
-  $result = drush_command_invoke_all('situs_pre_build');
-  if (!empty($result)) {
+  if (!situs_invoke('pre_build')) {
     return FALSE;
   }
 
@@ -126,10 +140,10 @@ function drush_situs_build($alias = '') {
   }
 
   // @todo document this.
-  $result = drush_command_invoke_all('situs_post_build', $build_path);
-  if (!empty($result)) {
+  if (!situs_invoke('post_build', $build_path)) {
     return FALSE;
   }
+
   // Move site into place.
   if (file_exists($root)) {
     if (!drush_move_dir($root, $root . '.situs-old', TRUE)) {
@@ -138,13 +152,13 @@ function drush_situs_build($alias = '') {
     drush_set_context('SITUS_ROOT_MOVED', TRUE);
   }
   if (!drush_move_dir($build_path, $root, TRUE)) {
-    return drush_set_error('CANNOT_MOVE_NEW_ROOT', dt('Cannot move new site into place. It is located at @path, please fi'));
+    return drush_set_error('CANNOT_MOVE_NEW_ROOT', dt('Cannot move new site into place. It is located at @path, please figure out what went wrong.'));
   }
+  // @xxx Post move hooks?
   // Now delete the old dir.
   if (file_exists($root . '.situs-old')) {
     drush_delete_dir($root . '.situs-old', TRUE);
   }
-  // @xxx Post move hooks?
 }
 
 /**
@@ -170,22 +184,152 @@ function drush_situs_build_rollback() {
 }
 
 /**
- * Implements hook_drush_help_alter().
- *
- * Add in the options for git-check. This demonstrates how add on modules should
- * do it.
+ * List hooks command.
  */
-function situs_drush_help_alter(&$command) {
-  if ($command['command'] == 'situs-build') {
-    $command['options']['git-check'] = 'Check that all git repositories contains no uncommitted changes';
+function drush_situs_hooks() {
+  foreach (situs_hooks() as $key => $info) {
+    drush_print($info['name'] . ' (' . $key . ')');
+    drush_print(wordwrap($info['description'], drush_get_context('DRUSH_COLUMNS', 80)));
+    drush_print();
+
+    // Sort command options.
+    uksort($info['options'], '_drush_help_sort_command_options');
+
+    // Print command sections help.
+    foreach (array('options' => dt('Arguments')) as $key => $value) {
+      if (!empty($info[$key])) {
+        drush_print(dt($value) . ':');
+        $rows = drush_format_help_section($info, $key);
+        drush_print_table($rows, FALSE, array(40));
+        unset($rows);
+        drush_print();
+      }
+    }
   }
 }
 
+/**
+ * Implements hook_situs_hooks().
+ */
+function situs_situs_hooks() {
+  return array(
+    'git-check' => array(
+      'name' => 'Git check',
+      'description' => 'Checks each git repository in the old site to ensure that there is no uncommitted changes or unpushed commits.',
+      'options' => array(
+        'git-check' => 'Check that all git repositories contains no uncommitted changes',
+      ),
+      'pre_build' => 'situs_git_pre_build',
+    ),
+    // @todo
+    /* 'drush' => array( */
+    /*   'name' => 'Drush command', */
+    /*   'description' => 'Runs drush commands.', */
+    /*   'options' => array( */
+    /*     // @todo Add in more documentation somewhere. */
+    /*     'drush' => 'Arrays of commands for each phase.', */
+    /*   ), */
+    /*   'pre_build' => 'situs_drush_pre_build', */
+    /*   'post_build' => 'situs_drush_post_build', */
+    /* ), */
+  );
+}
 
 /**
- * Implements hook_situs_pre_build().
+ * Get defined situs hooks.
  */
-function situs_situs_pre_build() {
+function situs_hooks() {
+  static $hooks;
+  if (!isset($hooks)) {
+    $hooks = drush_command_invoke_all('situs_hooks');
+    foreach ($hooks as $key => &$info) {
+      $info += array(
+        'name' => '',
+        'description' => '',
+        'options' => array(),
+      );
+    }
+  }
+  return $hooks;
+}
+
+function situs_default_hook_order($hook) {
+  static $orders = array(
+    'pre_build' => '*,drush',
+    'post_build' => '',
+  );
+  return $orders[$hook];
+}
+
+/**
+ * Sorts an array of hooks according to a string spec.
+ *
+ * The spec is a comma separated list of names, with * functioning as a wildcard
+ * for any unspecified hooks. For example will "*,drush" ensure that the drush
+ * hook is called last.
+ */
+function situs_order_hooks($hooks, $order) {
+  $pre = $post = array();
+  $seen_star = FALSE;
+  $order = explode(',', $order);
+  $hooks = array_flip($hooks);
+  foreach ($order as $spec) {
+    $spec = trim($spec);
+    if (isset($hooks[$spec])) {
+      unset($hooks[$spec]);
+      if ($seen_star) {
+        $post[] = $spec;
+      }
+      else {
+        $pre[] = $spec;
+      }
+    }
+    elseif ($spec == '*') {
+      $seen_star = TRUE;
+    }
+  }
+  return array_merge($pre, array_keys($hooks), $post);
+}
+
+/**
+ * Invoke a situs hook, respecting any hook orders given.
+ *
+ * @param string $hook
+ *   The hook to invoke.
+ *
+ * @returns bool
+ *   Whether all hooks was successful.
+ */
+function situs_invoke($hook) {
+  $args = func_get_args();
+  array_shift($args);
+  $defined_hooks = situs_hooks();
+  $command_files = array();
+  foreach ($defined_hooks as $key => $defined_hook) {
+    if (!empty($defined_hook[$hook])) {
+      $command_files[] = $key;
+    }
+  }
+  $order = drush_get_option($hook . '_order', situs_default_hook_order($hook));
+  $command_files = situs_order_hooks($command_files, $order);
+
+  $return = TRUE;
+  foreach ($command_files as $command_file) {
+    drush_log(dt('Calling @hook Situs @hook_name hook.', array('@hook' => $command_file, '@hook_name' => $hook)), 'notice');
+    $function = $defined_hooks[$command_file][$hook];
+    $result = call_user_func_array($function, $args);
+    // Any hook returning non-true is considered a failure.
+    if (isset($result)) {
+      $return &= (bool) $result;
+    }
+  }
+  return $return;
+}
+
+/**
+ * Pre build callback.
+ */
+function situs_git_pre_build() {
   if (drush_get_option('git-check', FALSE)) {
     $success = TRUE;
     $root = drush_get_option('root', '');
