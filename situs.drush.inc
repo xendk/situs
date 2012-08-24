@@ -222,16 +222,17 @@ function situs_situs_plugin() {
       'pre_build' => 'situs_git_pre_build',
     ),
     // @todo
-    /* 'drush' => array( */
-    /*   'name' => 'Drush command', */
-    /*   'description' => 'Runs drush commands.', */
-    /*   'options' => array( */
-    /*     // @todo Add in more documentation somewhere. */
-    /*     'drush' => 'Arrays of commands for each phase.', */
-    /*   ), */
-    /*   'pre_build' => 'situs_drush_pre_build', */
-    /*   'post_build' => 'situs_drush_post_build', */
-    /* ), */
+    'drush' => array(
+      'name' => 'Drush command',
+      'description' => 'Runs drush commands.',
+      'options' => array(
+        // @todo Add in more documentation somewhere.
+        'drush-pre-build' => 'Array of pre-build commands.',
+        'drush-post-build' => 'Array of post-build commands.',
+      ),
+      'pre_build' => 'situs_drush_pre_build',
+      'post_build' => 'situs_drush_post_build',
+    ),
   );
 }
 
@@ -349,5 +350,41 @@ function situs_git_pre_build() {
       }
     }
     return $success;
+  }
+}
+
+/**
+ *
+ */
+function situs_drush_pre_build() {
+  if ($commands = drush_get_option('drush-pre-build', array())) {
+    return situs_drush_run_commands($commands);
+  }
+}
+
+/**
+ *
+ */
+function situs_drush_post_build() {
+  if ($commands = drush_get_option('drush-post-build', array())) {
+    return situs_drush_run_commands($commands);
+  }
+}
+
+function situs_drush_run_commands($commands) {
+  foreach ($commands as $command) {
+    // Support a simple command name.
+    if (!is_array($command)) {
+      $command = array($command);
+    }
+    $cmd = $command[0];
+    $arguments = isset($command[1]) ? $command[1] : array();
+    $options = isset($command[2]) ? $command[2] : array();
+    drush_print_r(array($cmd, $arguments, $options));
+    $res = drush_invoke_process('@self', $cmd, $arguments, $options, TRUE);
+
+    if (!$res || $res['error_status'] != 0) {
+      return drush_set_error('DRUSH_FAILED', dt('Drush command failed.'));
+    }
   }
 }

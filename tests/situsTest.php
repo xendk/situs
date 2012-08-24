@@ -199,4 +199,12 @@ class situsCase extends Drush_CommandTestCase {
     $this->assertFileExists($root . '/modules/system/system.module', 'System module is there.');
     $this->assertFileExists($root . '/sites/all/modules/contrib/devel/devel.module', 'Devel is there.');
   }
+
+  function testDrushCommands() {
+    $root = $this->webroot() . '/carl';
+    $make_file = dirname(__FILE__) . '/simple.make';
+
+    $this->drush('situs-build', array(), array('root' => $root, 'make-file' => $make_file, 'drush-pre-bulid' => array()));
+
+  }
 }
