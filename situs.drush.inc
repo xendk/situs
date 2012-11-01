@@ -334,6 +334,11 @@ function situs_git_pre_build() {
   if (drush_get_option('git-check', FALSE)) {
     $success = TRUE;
     $root = drush_get_option('root', '');
+    // If root is not a directory (i.e. on first time build) bail out with
+    // success.
+    if (!is_dir($root)) {
+      return TRUE;
+    }
     $git_checkouts = `find $root -type d -name .git`;
     $git_checkouts = array_filter(split("\n", $git_checkouts));
     foreach ($git_checkouts as $filename) {
