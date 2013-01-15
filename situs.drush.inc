@@ -186,6 +186,8 @@ function drush_situs_build_rollback() {
  * List hooks command.
  */
 function drush_situs_plugins() {
+  drush_print('Available plugins:');
+  drush_print();
   foreach (situs_plugins() as $key => $info) {
     drush_print($info['name'] . ' (' . $key . ')');
     drush_print(wordwrap($info['description'], drush_get_context('DRUSH_COLUMNS', 80)));
@@ -195,12 +197,13 @@ function drush_situs_plugins() {
     uksort($info['options'], '_drush_help_sort_command_options');
 
     // Print command sections help.
-    foreach (array('options' => dt('Arguments')) as $key => $value) {
+    foreach (array('options' => dt('Parameters')) as $key => $value) {
       if (!empty($info[$key])) {
         drush_print(dt($value) . ':');
         $rows = drush_format_help_section($info, $key);
         drush_print_table($rows, FALSE, array(40));
         unset($rows);
+        drush_print();
         drush_print();
       }
     }
