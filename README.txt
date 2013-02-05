@@ -35,6 +35,23 @@ drush situs-build @mysite
 Which will run the make file, move the sites in sites/ over and
 replace the old root with the newly build.
 
+Saving files
+============
+
+You might want to save some files through rebuilding, such as IDE
+configuration files, TAG files or other local files. Situs attempts to
+save the files specified by the --save-files option, but if the
+directory of the specified file does not exist in the new build, it
+will be quietly dropped.
+
+To specify save files on a global basis you can add it to drushrc.php
+in your .drush folder like so:
+
+$command_specific = array(
+  'situs' => array(
+    'save-files' => 'TAGS,GTAGS,GPATH,GRTAGS,GSYMS',
+  ),
+);
 
 Extending
 =========

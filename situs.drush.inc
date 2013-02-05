@@ -13,6 +13,7 @@ function situs_drush_command() {
   $options = array(
     'root' => 'The root of the site to build.',
     'make-file' => 'The make file to use for building.',
+    'save-files' => 'Comma-separated list of files to save when rebuilding.',
   );
   foreach (situs_plugins() as $info) {
     if (!empty($info['options'])) {
@@ -117,25 +118,55 @@ function drush_situs_build($alias = '') {
     return drush_set_error('BUILD_FAILED', dt('Drush Make failed.'));
   }
 
-  // @todo backup the old around here.
-  // Move site/ stuff to the new.
-  $files = drush_scan_directory($root . '/sites', '/.*/', array('all', 'example.sites.php'), 0, FALSE, 'basename');
-  $moved = array();
-  foreach ($files as $name => $info) {
-    if (is_dir($info->filename)) {
-      if (!drush_move_dir($info->filename, $build_path . '/sites/' . $name, TRUE)) {
-        return drush_set_error('CANNOT_MOVE_SITE', dt('Could not move site @site.', array('@site' => $name)));
+  if (file_exists($root)) {
+    // @todo backup the old around here.
+    // Move site/ stuff to the new.
+    $files = drush_scan_directory($root . '/sites', '/.*/', array('all', 'example.sites.php'), 0, FALSE, 'basename');
+    $moved = array();
+    foreach ($files as $name => $info) {
+      if (is_dir($info->filename)) {
+        if (!drush_move_dir($info->filename, $build_path . '/sites/' . $name, TRUE)) {
+          return drush_set_error('CANNOT_MOVE_SITE', dt('Could not move site @site.', array('@site' => $name)));
+        }
+        $moved[] = $name;
       }
-      $moved[] = $name;
-    }
-    else {
-      if (!drush_op('rename', $info->filename, $build_path . '/sites/' . $name)) {
-        return drush_set_error('CANNOT_MOVE_FILE', dt('Could not move file @file.', array('@file' => $name)));
+      else {
+        if (!drush_op('rename', $info->filename, $build_path . '/sites/' . $name)) {
+          return drush_set_error('CANNOT_MOVE_FILE', dt('Could not move file @file.', array('@file' => $name)));
 
+        }
+        $moved[] = $name;
       }
-      $moved[] = $name;
+      drush_set_context('SITUS_MOVED_SITES', $moved);
     }
-    drush_set_context('SITUS_MOVED_SITES', $moved);
+
+    // Save files specified by --save-files.
+    $saved_files = array();
+    if ($save_files = drush_get_option('save-files', NULL)) {
+      $save_files = explode(',', $save_files);
+      foreach ($save_files as $save_file) {
+        if (file_exists($root . '/' . $save_file)) {
+          if (!file_exists(dirname($build_path . '/' . $save_file))) {
+            drush_log(dt('Not moving save file @file, destination directory does not exist.', array('@file', $save_file)), 'notice');
+            continue;
+          }
+          if (is_dir($root . '/' . $save_file)) {
+            if (!drush_move_dir($root . '/' . $save_file, $build_path . '/' . $save_file, TRUE)) {
+              return drush_set_error('CANNOT_MOVE_FILE', dt('Could not move file @file.', array('@file' => $save_file)));
+            }
+            $saved_files[] = $name;
+          }
+          else {
+            if (!drush_op('rename', $root . '/' . $save_file, $build_path . '/' . $save_file)) {
+              return drush_set_error('CANNOT_MOVE_FILE', dt('Could not move file @file.', array('@file' => $save_file)));
+
+            }
+            $saved_files[] = $name;
+          }
+          drush_set_context('SITUS_MOVED_FILES', $moved);
+        }
+      }
+    }
   }
 
   // @todo document this.
@@ -172,11 +203,22 @@ function drush_situs_build_rollback() {
   }
   if ($sites = drush_get_context('SITUS_MOVED_SITES', array())) {
     foreach ($sites as $name) {
-      if (is_dir($info->filename)) {
+      if (is_dir($build_path . '/sites/' . $name)) {
         drush_move_dir($build_path . '/sites/' . $name, $root . '/sites/' . $name, TRUE);
       }
       else {
         drush_op('rename', $build_path . '/sites/' . $name, $root . '/sites/' . $name);
+      }
+    }
+  }
+
+  if ($files = drush_get_context('SITUS_MOVED_FILES', array())) {
+    foreach ($files as $name) {
+      if (is_dir($build_path . '/' . $name)) {
+        drush_move_dir($build_path . '/' . $name, $root . '/' . $name, TRUE);
+      }
+      else {
+        drush_op('rename', $build_path . '/' . $name, $root . '/' . $name);
       }
     }
   }
