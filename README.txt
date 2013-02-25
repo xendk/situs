@@ -56,9 +56,9 @@ $command_specific = array(
 Extending
 =========
 
-Situs is meant to be expanded upon, and the plan is to include a
-selection of useful add-ons. Currently there's only the git-check
-plugin (see below), but implementing a plugin is strait-forward:
+Situs can be extended with plugins that run before and/or after the
+build process. Currently there's only the git-check plugin (see
+below), but implementing a plugin is strait-forward:
 
 Plugins should implement hook_situs_plugin() which should return an
 array of plugins. This array is keyed on internal plugin name, and the
@@ -95,24 +95,3 @@ It is highly recommended to put it in the alias if using git for
 development, as it provides a safety net against building over
 uncommitted/pushed changes.
 
-
-Ideas for plugins
-=================
-
-Some plugins that's planned (I wont complain if someone beats me to it
-with a pull request):
-
-Database sync: Triggers on the existence of a 'sync-from' option,
-which is the name of another alias to do a sql-sync from. Has a
-no-db-sync killswitch (as the sync-from option is shared with files
-sync).
-
-Files sync: The same as db sync, but for core-rsync.
-
-Install modules: Installs additional modules using drush dl.
-
-Enable modules: Enables modules that's either part of the build, but
-not enabled per default, or downloaded by the previous plugin.
-
-Drush command: Runs an arbitrary drush command. The previous two is
-probably obsoleted by this.
