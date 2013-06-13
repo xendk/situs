@@ -14,6 +14,8 @@ function situs_drush_command() {
     'root' => 'The root of the site to build.',
     'make-file' => 'The make file to use for building.',
     'save-files' => 'Comma-separated list of files to save when rebuilding.',
+    'settings-file' => 'The settings.php file (of default site) to copy to the build.',
+    'no-version-control' => 'The build should not be a working copy, i.e. not contain any VCS metadata.',
   );
   foreach (situs_plugins() as $info) {
     if (!empty($info['options'])) {
@@ -99,6 +101,8 @@ function drush_situs_build($alias = '') {
   $root = drush_get_option('root', FALSE);
   $makefile = drush_get_option('make-file', FALSE);
 
+  $settingsfile = drush_get_option('settings-file', FALSE);
+  $no_version_control = drush_get_option('no-version-control', FALSE);
   $build_path = drush_tempdir() . '/build';
 
   drush_set_context('SITUS_ROOT_PATH', $root);
@@ -110,7 +114,8 @@ function drush_situs_build($alias = '') {
   }
 
   $settings = array(
-    'working-copy' => TRUE,
+    // Ony make working copy if version control is not deselected.
+    'working-copy' => !$no_version_control,
   );
   $res = drush_invoke_process('@self', 'make', array($makefile, $build_path), $settings, TRUE);
 
@@ -138,6 +143,9 @@ function drush_situs_build($alias = '') {
         $moved[] = $name;
       }
       drush_set_context('SITUS_MOVED_SITES', $moved);
+    }
+    if (is_file($settingsfile)) {
+      copy($settingsfile, $build_path . '/sites/default/settings.php');
     }
 
     // Save files specified by --save-files.
