@@ -35,6 +35,18 @@ drush situs-build @mysite
 Which will run the make file, move the sites in sites/ over and
 replace the old root with the newly build.
 
+Extra options
+=============
+
+(Can be specified in command line or alias)
+
+settings-file
+Can be used to specify a settings.php file to be copied into the sites/default
+folder of the build.
+
+no-version-control
+If specified, it will not make a working copy with version control data.
+
 Saving files
 ============
 
