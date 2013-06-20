@@ -123,6 +123,10 @@ function drush_situs_build($alias = '') {
     return drush_set_error('BUILD_FAILED', dt('Drush Make failed.'));
   }
 
+  if (is_file($settingsfile)) {
+    copy($settingsfile, $build_path . '/sites/default/settings.php');
+  }
+
   if (file_exists($root)) {
     // @todo backup the old around here.
     // Move site/ stuff to the new.
@@ -143,9 +147,6 @@ function drush_situs_build($alias = '') {
         $moved[] = $name;
       }
       drush_set_context('SITUS_MOVED_SITES', $moved);
-    }
-    if (is_file($settingsfile)) {
-      copy($settingsfile, $build_path . '/sites/default/settings.php');
     }
 
     // Save files specified by --save-files.
